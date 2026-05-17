@@ -31,24 +31,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     && rm -rf /var/lib/apt/lists/*
 
+# uv 바이너리 공식 이미지로부터 복사
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
 COPY backend/requirements.txt .
 
+# 도커 빌드 캐시 마운트 적용 및 uv를 통한 초고속 의존성 설치
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv pip install --system --prefix=/install -r requirements.txt \
-    --index-url https://download.pytorch.org/whl/cu121 \
-    --extra-index-url https://pypi.org/simple && \
+    uv pip install --system --prefix=/install -r requirements.txt && \
     uv pip install --system --prefix=/install --no-deps chatterbox-tts hume-tada && \
     uv pip install --system --prefix=/install git+https://github.com/QwenLM/Qwen3-TTS.git
-# to enable flash attention (not fixed though), replace above with below
-# RUN --mount=type=cache,target=/root/.cache/uv \
-#     uv pip install --system --prefix=/install -r requirements.txt \
-#     --index-url https://download.pytorch.org/whl/cu121 \
-#     --extra-index-url https://pypi.org/simple && \
-#     uv pip install --system --prefix=/install --no-deps chatterbox-tts hume-tada && \
-#     uv pip install --system --prefix=/install git+https://github.com/QwenLM/Qwen3-TTS.git && \
-#     PYTHONPATH=/install/lib/python3.11/site-packages uv pip install --system --prefix=/install flash-attn --no-build-isolation
 
 
 # === Stage 3: Runtime ===
@@ -64,7 +56,6 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ffmpeg \
     curl \
-    sox \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy installed Python packages from builder stage
@@ -87,10 +78,6 @@ RUN mkdir -p /home/voicebox/.cache/huggingface \
 
 # Switch to non-root user
 USER voicebox
-
-# GPU 가속을 위한 NVIDIA 컨테이너 툴킷 환경 변수 명시 (python-slim 베이스 사용 시 필수)
-ENV NVIDIA_VISIBLE_DEVICES=all \
-    NVIDIA_DRIVER_CAPABILITIES=compute,utility
 
 # Expose the API port
 EXPOSE 17493

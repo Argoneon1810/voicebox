@@ -31,24 +31,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     && rm -rf /var/lib/apt/lists/*
 
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+RUN pip install --no-cache-dir --upgrade pip
 
 COPY backend/requirements.txt .
-
-RUN --mount=type=cache,target=/root/.cache/uv \
-    uv pip install --system --prefix=/install -r requirements.txt \
-    --index-url https://download.pytorch.org/whl/cu121 \
-    --extra-index-url https://pypi.org/simple && \
-    uv pip install --system --prefix=/install --no-deps chatterbox-tts hume-tada && \
-    uv pip install --system --prefix=/install git+https://github.com/QwenLM/Qwen3-TTS.git
-# to enable flash attention (not fixed though), replace above with below
-# RUN --mount=type=cache,target=/root/.cache/uv \
-#     uv pip install --system --prefix=/install -r requirements.txt \
-#     --index-url https://download.pytorch.org/whl/cu121 \
-#     --extra-index-url https://pypi.org/simple && \
-#     uv pip install --system --prefix=/install --no-deps chatterbox-tts hume-tada && \
-#     uv pip install --system --prefix=/install git+https://github.com/QwenLM/Qwen3-TTS.git && \
-#     PYTHONPATH=/install/lib/python3.11/site-packages uv pip install --system --prefix=/install flash-attn --no-build-isolation
+RUN pip install --no-cache-dir --prefix=/install -r requirements.txt
+RUN pip install --no-cache-dir --prefix=/install --no-deps chatterbox-tts
+RUN pip install --no-cache-dir --prefix=/install --no-deps hume-tada
+RUN pip install --no-cache-dir --prefix=/install \
+    git+https://github.com/QwenLM/Qwen3-TTS.git
 
 
 # === Stage 3: Runtime ===
@@ -64,7 +54,6 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ffmpeg \
     curl \
-    sox \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy installed Python packages from builder stage
@@ -80,17 +69,8 @@ COPY --from=frontend --chown=voicebox:voicebox /build/web/dist /app/frontend/
 RUN mkdir -p /app/data/generations /app/data/profiles /app/data/cache \
     && chown -R voicebox:voicebox /app/data
 
-# Permission Denied Fix: https://github.com/jamiepine/voicebox/issues/542
-# Create HuggingFace cache directory for the named volume
-RUN mkdir -p /home/voicebox/.cache/huggingface \
-    && chown -R voicebox:voicebox /home/voicebox/.cache/huggingface
-
 # Switch to non-root user
 USER voicebox
-
-# GPU 가속을 위한 NVIDIA 컨테이너 툴킷 환경 변수 명시 (python-slim 베이스 사용 시 필수)
-ENV NVIDIA_VISIBLE_DEVICES=all \
-    NVIDIA_DRIVER_CAPABILITIES=compute,utility
 
 # Expose the API port
 EXPOSE 17493

@@ -41,14 +41,6 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     --extra-index-url https://pypi.org/simple && \
     uv pip install --system --prefix=/install --no-deps chatterbox-tts hume-tada && \
     uv pip install --system --prefix=/install git+https://github.com/QwenLM/Qwen3-TTS.git
-# to enable flash attention (not fixed though), replace above with below
-# RUN --mount=type=cache,target=/root/.cache/uv \
-#     uv pip install --system --prefix=/install -r requirements.txt \
-#     --index-url https://download.pytorch.org/whl/cu121 \
-#     --extra-index-url https://pypi.org/simple && \
-#     uv pip install --system --prefix=/install --no-deps chatterbox-tts hume-tada && \
-#     uv pip install --system --prefix=/install git+https://github.com/QwenLM/Qwen3-TTS.git && \
-#     PYTHONPATH=/install/lib/python3.11/site-packages uv pip install --system --prefix=/install flash-attn --no-build-isolation
 
 
 # === Stage 3: Runtime ===
@@ -64,7 +56,6 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ffmpeg \
     curl \
-    sox \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy installed Python packages from builder stage
